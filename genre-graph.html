@@ -1,0 +1,349 @@
+<html>
+    <head>
+        <meta charset="utf-8">
+        
+            <script>function neighbourhoodHighlight(params) {
+  // console.log("in nieghbourhoodhighlight");
+  allNodes = nodes.get({ returnType: "Object" });
+  // originalNodes = JSON.parse(JSON.stringify(allNodes));
+  // if something is selected:
+  if (params.nodes.length > 0) {
+    highlightActive = true;
+    var i, j;
+    var selectedNode = params.nodes[0];
+    var degrees = 2;
+
+    // mark all nodes as hard to read.
+    for (let nodeId in allNodes) {
+      // nodeColors[nodeId] = allNodes[nodeId].color;
+      allNodes[nodeId].color = "rgba(200,200,200,0.5)";
+      if (allNodes[nodeId].hiddenLabel === undefined) {
+        allNodes[nodeId].hiddenLabel = allNodes[nodeId].label;
+        allNodes[nodeId].label = undefined;
+      }
+    }
+    var connectedNodes = network.getConnectedNodes(selectedNode);
+    var allConnectedNodes = [];
+
+    // get the second degree nodes
+    for (i = 1; i < degrees; i++) {
+      for (j = 0; j < connectedNodes.length; j++) {
+        allConnectedNodes = allConnectedNodes.concat(
+          network.getConnectedNodes(connectedNodes[j])
+        );
+      }
+    }
+
+    // all second degree nodes get a different color and their label back
+    for (i = 0; i < allConnectedNodes.length; i++) {
+      // allNodes[allConnectedNodes[i]].color = "pink";
+      allNodes[allConnectedNodes[i]].color = "rgba(150,150,150,0.75)";
+      if (allNodes[allConnectedNodes[i]].hiddenLabel !== undefined) {
+        allNodes[allConnectedNodes[i]].label =
+          allNodes[allConnectedNodes[i]].hiddenLabel;
+        allNodes[allConnectedNodes[i]].hiddenLabel = undefined;
+      }
+    }
+
+    // all first degree nodes get their own color and their label back
+    for (i = 0; i < connectedNodes.length; i++) {
+      // allNodes[connectedNodes[i]].color = undefined;
+      allNodes[connectedNodes[i]].color = nodeColors[connectedNodes[i]];
+      if (allNodes[connectedNodes[i]].hiddenLabel !== undefined) {
+        allNodes[connectedNodes[i]].label =
+          allNodes[connectedNodes[i]].hiddenLabel;
+        allNodes[connectedNodes[i]].hiddenLabel = undefined;
+      }
+    }
+
+    // the main node gets its own color and its label back.
+    // allNodes[selectedNode].color = undefined;
+    allNodes[selectedNode].color = nodeColors[selectedNode];
+    if (allNodes[selectedNode].hiddenLabel !== undefined) {
+      allNodes[selectedNode].label = allNodes[selectedNode].hiddenLabel;
+      allNodes[selectedNode].hiddenLabel = undefined;
+    }
+  } else if (highlightActive === true) {
+    // console.log("highlightActive was true");
+    // reset all nodes
+    for (let nodeId in allNodes) {
+      // allNodes[nodeId].color = "purple";
+      allNodes[nodeId].color = nodeColors[nodeId];
+      // delete allNodes[nodeId].color;
+      if (allNodes[nodeId].hiddenLabel !== undefined) {
+        allNodes[nodeId].label = allNodes[nodeId].hiddenLabel;
+        allNodes[nodeId].hiddenLabel = undefined;
+      }
+    }
+    highlightActive = false;
+  }
+
+  // transform the object into an array
+  var updateArray = [];
+  if (params.nodes.length > 0) {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        // console.log(allNodes[nodeId]);
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  } else {
+    // console.log("Nothing was selected");
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        // console.log(allNodes[nodeId]);
+        // allNodes[nodeId].color = {};
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  }
+}
+
+function filterHighlight(params) {
+  allNodes = nodes.get({ returnType: "Object" });
+  // if something is selected:
+  if (params.nodes.length > 0) {
+    filterActive = true;
+    let selectedNodes = params.nodes;
+
+    // hiding all nodes and saving the label
+    for (let nodeId in allNodes) {
+      allNodes[nodeId].hidden = true;
+      if (allNodes[nodeId].savedLabel === undefined) {
+        allNodes[nodeId].savedLabel = allNodes[nodeId].label;
+        allNodes[nodeId].label = undefined;
+      }
+    }
+
+    for (let i=0; i < selectedNodes.length; i++) {
+      allNodes[selectedNodes[i]].hidden = false;
+      if (allNodes[selectedNodes[i]].savedLabel !== undefined) {
+        allNodes[selectedNodes[i]].label = allNodes[selectedNodes[i]].savedLabel;
+        allNodes[selectedNodes[i]].savedLabel = undefined;
+      }
+    }
+
+  } else if (filterActive === true) {
+    // reset all nodes
+    for (let nodeId in allNodes) {
+      allNodes[nodeId].hidden = false;
+      if (allNodes[nodeId].savedLabel !== undefined) {
+        allNodes[nodeId].label = allNodes[nodeId].savedLabel;
+        allNodes[nodeId].savedLabel = undefined;
+      }
+    }
+    filterActive = false;
+  }
+
+  // transform the object into an array
+  var updateArray = [];
+  if (params.nodes.length > 0) {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  } else {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  }
+}
+
+function selectNode(nodes) {
+  network.selectNodes(nodes);
+  neighbourhoodHighlight({ nodes: nodes });
+  return nodes;
+}
+
+function selectNodes(nodes) {
+  network.selectNodes(nodes);
+  filterHighlight({nodes: nodes});
+  return nodes;
+}
+
+function highlightFilter(filter) {
+  let selectedNodes = []
+  let selectedProp = filter['property']
+  if (filter['item'] === 'node') {
+    let allNodes = nodes.get({ returnType: "Object" });
+    for (let nodeId in allNodes) {
+      if (allNodes[nodeId][selectedProp] && filter['value'].includes((allNodes[nodeId][selectedProp]).toString())) {
+        selectedNodes.push(nodeId)
+      }
+    }
+  }
+  else if (filter['item'] === 'edge'){
+    let allEdges = edges.get({returnType: 'object'});
+    // check if the selected property exists for selected edge and select the nodes connected to the edge
+    for (let edge in allEdges) {
+      if (allEdges[edge][selectedProp] && filter['value'].includes((allEdges[edge][selectedProp]).toString())) {
+        selectedNodes.push(allEdges[edge]['from'])
+        selectedNodes.push(allEdges[edge]['to'])
+      }
+    }
+  }
+  selectNodes(selectedNodes)
+}</script>
+            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/dist/vis-network.min.css" integrity="sha512-WgxfT5LWjfszlPHXRmBWHkV2eceiWTOBvrKCNbdgDYTHrT2AeLCGbF4sZlZw3UMN3WtL0tGUoIAKsu8mllg/XA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/vis-network.min.js" integrity="sha512-LnvoEWDFrqGHlHmDD2101OrLcbsfkrzoSpvtSQtxK3RMnRV0eOkhhBN2dXHKRrUU8p2DGRTk35n4O8nWSVe1mQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+            
+            
+            
+            
+            
+            
+
+        
+<center>
+<h1></h1>
+</center>
+
+<!-- <link rel="stylesheet" href="../node_modules/vis/dist/vis.min.css" type="text/css" />
+<script type="text/javascript" src="../node_modules/vis/dist/vis.js"> </script>-->
+        <link
+          href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/css/bootstrap.min.css"
+          rel="stylesheet"
+          integrity="sha384-eOJMYsd53ii+scO/bJGFsiCZc+5NDVN2yr8+0RDqr0Ql0h+rP48ckxlpbzKgwra6"
+          crossorigin="anonymous"
+        />
+        <script
+          src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/js/bootstrap.bundle.min.js"
+          integrity="sha384-JEW9xMcG8R+pH31jmWH6WWP0WintQrMb4s7ZOdauHnUtxwoG2vI5DkLtS3qm9Ekf"
+          crossorigin="anonymous"
+        ></script>
+
+
+        <center>
+          <h1></h1>
+        </center>
+        <style type="text/css">
+
+             #mynetwork {
+                 width: 100%;
+                 height: 100vh;
+                 background-color: #ffffff;
+                 border: 1px solid lightgray;
+                 position: relative;
+                 float: left;
+             }
+
+             
+
+             
+
+             
+        </style>
+    </head>
+
+
+    <body>
+        <div class="card" style="width: 100%">
+            
+            
+            <div id="mynetwork" class="card-body"></div>
+        </div>
+
+        
+        
+
+        <script type="text/javascript">
+
+              // initialize global variables.
+              var edges;
+              var nodes;
+              var allNodes;
+              var allEdges;
+              var nodeColors;
+              var originalNodes;
+              var network;
+              var container;
+              var options, data;
+              var filter = {
+                  item : '',
+                  property : '',
+                  value : []
+              };
+
+              
+
+              
+
+              // This method is responsible for drawing the graph, returns the drawn network
+              function drawGraph() {
+                  var container = document.getElementById('mynetwork');
+
+                  
+
+                  // parsing and collecting nodes and edges from the python
+                  nodes = new vis.DataSet([{"group": 0, "id": "[ST] Puzzle \u003e Word", "label": "[ST] Puzzle \u003e Word", "shape": "dot", "x": 300, "y": 0}, {"group": 0, "id": "[R] Puzzle \u003e Word", "label": "[R] Puzzle \u003e Word", "shape": "dot", "x": 0, "y": 0}, {"group": 1, "id": "[ST] Puzzle \u003e Hidden Objects", "label": "[ST] Puzzle \u003e Hidden Objects", "shape": "dot", "x": 300, "y": 150}, {"group": 1, "id": "[R] Puzzle \u003e Other Puzzle", "label": "[R] Puzzle \u003e Other Puzzle", "shape": "dot", "x": 0, "y": 150}, {"group": 1, "id": "[ST] Puzzle \u003e Bubble Shooter", "label": "[ST] Puzzle \u003e Bubble Shooter", "shape": "dot", "x": 300, "y": 250}, {"group": 1, "id": "[ST] Puzzle \u003e Sort", "label": "[ST] Puzzle \u003e Sort", "shape": "dot", "x": 300, "y": 350}, {"group": 1, "id": "[ST] Puzzle \u003e Jigsaw", "label": "[ST] Puzzle \u003e Jigsaw", "shape": "dot", "x": 300, "y": 450}, {"group": 1, "id": "[ST] Puzzle \u003e Real-Time Puzzle", "label": "[ST] Puzzle \u003e Real-Time Puzzle", "shape": "dot", "x": 300, "y": 550}, {"group": 1, "id": "[ST] Puzzle \u003e Riddle", "label": "[ST] Puzzle \u003e Riddle", "shape": "dot", "x": 300, "y": 650}, {"group": 1, "id": "[ST] Puzzle \u003e Physics", "label": "[ST] Puzzle \u003e Physics", "shape": "dot", "x": 300, "y": 750}, {"group": 1, "id": "[ST] Puzzle \u003e Block", "label": "[ST] Puzzle \u003e Block", "shape": "dot", "x": 300, "y": 850}, {"group": 1, "id": "[ST] Puzzle \u003e Maze", "label": "[ST] Puzzle \u003e Maze", "shape": "dot", "x": 300, "y": 950}, {"group": 1, "id": "[ST] Puzzle \u003e Numbers", "label": "[ST] Puzzle \u003e Numbers", "shape": "dot", "x": 300, "y": 1050}, {"group": 1, "id": "[ST] Puzzle \u003e Other Puzzle", "label": "[ST] Puzzle \u003e Other Puzzle", "shape": "dot", "x": 300, "y": 1150}, {"group": 2, "id": "[ST] Puzzle \u003e Trivia", "label": "[ST] Puzzle \u003e Trivia", "shape": "dot", "x": 300, "y": 1300}, {"group": 2, "id": "[R] Party \u0026 Casual \u003e Quiz | Trivia", "label": "[R] Party \u0026 Casual \u003e Quiz | Trivia", "shape": "dot", "x": 0, "y": 1300}, {"group": 3, "id": "[ST] Puzzle \u003e Match Merge", "label": "[ST] Puzzle \u003e Match Merge", "shape": "dot", "x": 300, "y": 1450}, {"group": 3, "id": "[R] Puzzle \u003e Match \u0026 Merge", "label": "[R] Puzzle \u003e Match \u0026 Merge", "shape": "dot", "x": 0, "y": 1450}, {"group": 3, "id": "[ST] Puzzle \u003e Match Swap", "label": "[ST] Puzzle \u003e Match Swap", "shape": "dot", "x": 300, "y": 1550}, {"group": 3, "id": "[ST] Puzzle \u003e Match Blast", "label": "[ST] Puzzle \u003e Match Blast", "shape": "dot", "x": 300, "y": 1650}, {"group": 3, "id": "[ST] Puzzle \u003e Match Chain", "label": "[ST] Puzzle \u003e Match Chain", "shape": "dot", "x": 300, "y": 1750}, {"group": 3, "id": "[ST] Puzzle \u003e Match Pair", "label": "[ST] Puzzle \u003e Match Pair", "shape": "dot", "x": 300, "y": 1850}, {"group": 4, "id": "[ST] Puzzle \u003e Environmental", "label": "[ST] Puzzle \u003e Environmental", "shape": "dot", "x": 300, "y": 2000}, {"group": 4, "id": "[R] Adventure \u003e Scavenger Hunt Adventure", "label": "[R] Adventure \u003e Scavenger Hunt Adventure", "shape": "dot", "x": 0, "y": 2000}, {"group": 4, "id": "[R] Puzzle \u003e Escape Room", "label": "[R] Puzzle \u003e Escape Room", "shape": "dot", "x": 0, "y": 2100}, {"group": 5, "id": "[ST] Arcade \u003e Platformer / Runner", "label": "[ST] Arcade \u003e Platformer / Runner", "shape": "dot", "x": 300, "y": 2450}, {"group": 5, "id": "[R] Obby | Platformer \u003e Classic Obby | Classic Platformer", "label": "[R] Obby | Platformer \u003e Classic Obby | Classic Platformer", "shape": "dot", "x": 0, "y": 2450}, {"group": 5, "id": "[R] Obby | Platformer \u003e Runner", "label": "[R] Obby | Platformer \u003e Runner", "shape": "dot", "x": 0, "y": 2550}, {"group": 5, "id": "[R] Obby | Platformer \u003e Tower Obby | Tower Platformer", "label": "[R] Obby | Platformer \u003e Tower Obby | Tower Platformer", "shape": "dot", "x": 0, "y": 2650}, {"group": 5, "id": "[R] Obby | Platformer \u003e Other Obby | Platformer", "label": "[R] Obby | Platformer \u003e Other Obby | Platformer", "shape": "dot", "x": 0, "y": 2750}, {"group": 6, "id": "[ST] Arcade \u003e Arcade Driving", "label": "[ST] Arcade \u003e Arcade Driving", "shape": "dot", "x": 300, "y": 2900}, {"group": 6, "id": "[R] Simulation \u0026 Sandbox \u003e Driving | Vehicle Sim", "label": "[R] Simulation \u0026 Sandbox \u003e Driving | Vehicle Sim", "shape": "dot", "x": 0, "y": 2900}, {"group": 6, "id": "[ST] Simulation \u003e Driving / Flight Simulator", "label": "[ST] Simulation \u003e Driving / Flight Simulator", "shape": "dot", "x": 300, "y": 3000}, {"group": 7, "id": "[ST] Arcade \u003e Arcade Combat", "label": "[ST] Arcade \u003e Arcade Combat", "shape": "dot", "x": 300, "y": 3150}, {"group": 7, "id": "[R] Action \u0026 Rhythm \u003e Battlegrounds \u0026 Fighting", "label": "[R] Action \u0026 Rhythm \u003e Battlegrounds \u0026 Fighting", "shape": "dot", "x": 0, "y": 3150}, {"group": 7, "id": "[ST] Action \u003e Fighting", "label": "[ST] Action \u003e Fighting", "shape": "dot", "x": 300, "y": 3250}, {"group": 7, "id": "[ST] Strategy \u003e MOBA", "label": "[ST] Strategy \u003e MOBA", "shape": "dot", "x": 300, "y": 3350}, {"group": 8, "id": "[ST] Arcade \u003e Social Party", "label": "[ST] Arcade \u003e Social Party", "shape": "dot", "x": 300, "y": 3500}, {"group": 8, "id": "[R] Party \u0026 Casual \u003e Childhood Game", "label": "[R] Party \u0026 Casual \u003e Childhood Game", "shape": "dot", "x": 0, "y": 3500}, {"group": 8, "id": "[R] Party \u0026 Casual \u003e Minigame", "label": "[R] Party \u0026 Casual \u003e Minigame", "shape": "dot", "x": 0, "y": 3600}, {"group": 8, "id": "[R] Party \u0026 Casual \u003e Other Party \u0026 Casual", "label": "[R] Party \u0026 Casual \u003e Other Party \u0026 Casual", "shape": "dot", "x": 0, "y": 3700}, {"group": 9, "id": "[ST] Arcade \u003e Music / Rhythm", "label": "[ST] Arcade \u003e Music / Rhythm", "shape": "dot", "x": 300, "y": 3850}, {"group": 9, "id": "[R] Action \u0026 Rhythm \u003e Music \u0026 Rhythm", "label": "[R] Action \u0026 Rhythm \u003e Music \u0026 Rhythm", "shape": "dot", "x": 0, "y": 3850}, {"group": 10, "id": "[ST] Arcade \u003e .io", "label": "[ST] Arcade \u003e .io", "shape": "dot", "x": 300, "y": 4000}, {"group": 10, "id": "[R] Action \u0026 Rhythm \u003e Other Action", "label": "[R] Action \u0026 Rhythm \u003e Other Action", "shape": "dot", "x": 0, "y": 4000}, {"group": 10, "id": "[ST] Action \u003e Beat \u0027em Up", "label": "[ST] Action \u003e Beat \u0027em Up", "shape": "dot", "x": 300, "y": 4100}, {"group": 10, "id": "[ST] Action \u003e Hack and Slash", "label": "[ST] Action \u003e Hack and Slash", "shape": "dot", "x": 300, "y": 4200}, {"group": 10, "id": "[ST] Action \u003e Shoot \u0027em Up", "label": "[ST] Action \u003e Shoot \u0027em Up", "shape": "dot", "x": 300, "y": 4300}, {"group": 10, "id": "[ST] Arcade \u003e Pinball / Brick Breaker", "label": "[ST] Arcade \u003e Pinball / Brick Breaker", "shape": "dot", "x": 300, "y": 4400}, {"group": 10, "id": "[ST] Arcade \u003e Other Arcade", "label": "[ST] Arcade \u003e Other Arcade", "shape": "dot", "x": 300, "y": 4500}, {"group": 11, "id": "[ST] Simulation \u003e Simulator", "label": "[ST] Simulation \u003e Simulator", "shape": "dot", "x": 300, "y": 4650}, {"group": 11, "id": "[R] Simulation \u0026 Sandbox \u003e Other Simulation", "label": "[R] Simulation \u0026 Sandbox \u003e Other Simulation", "shape": "dot", "x": 0, "y": 4650}, {"group": 11, "id": "[ST] Simulation \u003e Time Management", "label": "[ST] Simulation \u003e Time Management", "shape": "dot", "x": 300, "y": 4750}, {"group": 11, "id": "[ST] Simulation \u003e Breeding", "label": "[ST] Simulation \u003e Breeding", "shape": "dot", "x": 300, "y": 4850}, {"group": 12, "id": "[ST] Simulation \u003e Tycoon / Crafting", "label": "[ST] Simulation \u003e Tycoon / Crafting", "shape": "dot", "x": 300, "y": 5000}, {"group": 12, "id": "[R] Simulation \u0026 Sandbox \u003e Tycoon | Management Sim", "label": "[R] Simulation \u0026 Sandbox \u003e Tycoon | Management Sim", "shape": "dot", "x": 0, "y": 5000}, {"group": 13, "id": "[ST] Simulation \u003e Adventure", "label": "[ST] Simulation \u003e Adventure", "shape": "dot", "x": 300, "y": 5150}, {"group": 13, "id": "[R] Adventure \u003e Adventure | Interactive Story", "label": "[R] Adventure \u003e Adventure | Interactive Story", "shape": "dot", "x": 0, "y": 5150}, {"group": 13, "id": "[R] Adventure \u003e Other Adventure", "label": "[R] Adventure \u003e Other Adventure", "shape": "dot", "x": 0, "y": 5250}, {"group": 13, "id": "[R] Survival \u003e Stealth Survival", "label": "[R] Survival \u003e Stealth Survival", "shape": "dot", "x": 0, "y": 5350}, {"group": 13, "id": "[R] Survival \u003e Other Survival", "label": "[R] Survival \u003e Other Survival", "shape": "dot", "x": 0, "y": 5450}, {"group": 14, "id": "[ST] Simulation \u003e Sandbox", "label": "[ST] Simulation \u003e Sandbox", "shape": "dot", "x": 300, "y": 5600}, {"group": 14, "id": "[R] Adventure \u003e Exploration", "label": "[R] Adventure \u003e Exploration", "shape": "dot", "x": 0, "y": 5600}, {"group": 14, "id": "[R] Simulation \u0026 Sandbox \u003e Physics Sim", "label": "[R] Simulation \u0026 Sandbox \u003e Physics Sim", "shape": "dot", "x": 0, "y": 5700}, {"group": 14, "id": "[R] Simulation \u0026 Sandbox \u003e Sandbox", "label": "[R] Simulation \u0026 Sandbox \u003e Sandbox", "shape": "dot", "x": 0, "y": 5800}, {"group": 15, "id": "[ST] Simulation \u003e Idler", "label": "[ST] Simulation \u003e Idler", "shape": "dot", "x": 300, "y": 5950}, {"group": 15, "id": "[R] Simulation \u0026 Sandbox \u003e Incremental Simulator", "label": "[R] Simulation \u0026 Sandbox \u003e Incremental Simulator", "shape": "dot", "x": 0, "y": 5950}, {"group": 16, "id": "[ST] Simulation \u003e Avatar Life", "label": "[ST] Simulation \u003e Avatar Life", "shape": "dot", "x": 300, "y": 6100}, {"group": 16, "id": "[R] Roleplay \u0026 Avatar Sim \u003e Animal Avatar Sim | Animal Roleplay", "label": "[R] Roleplay \u0026 Avatar Sim \u003e Animal Avatar Sim | Animal Roleplay", "shape": "dot", "x": 0, "y": 6100}, {"group": 16, "id": "[R] Roleplay \u0026 Avatar Sim \u003e Life", "label": "[R] Roleplay \u0026 Avatar Sim \u003e Life", "shape": "dot", "x": 0, "y": 6200}, {"group": 16, "id": "[R] Roleplay \u0026 Avatar Sim \u003e Morph", "label": "[R] Roleplay \u0026 Avatar Sim \u003e Morph", "shape": "dot", "x": 0, "y": 6300}, {"group": 16, "id": "[R] Roleplay \u0026 Avatar Sim \u003e Other Roleplay \u0026 Avatar Sim", "label": "[R] Roleplay \u0026 Avatar Sim \u003e Other Roleplay \u0026 Avatar Sim", "shape": "dot", "x": 0, "y": 6400}, {"group": 16, "id": "[ST] Lifestyle \u003e Interactive Story", "label": "[ST] Lifestyle \u003e Interactive Story", "shape": "dot", "x": 300, "y": 6200}, {"group": 17, "id": "[ST] Lifestyle \u003e Customization", "label": "[ST] Lifestyle \u003e Customization", "shape": "dot", "x": 300, "y": 6550}, {"group": 17, "id": "[R] Roleplay \u0026 Avatar Sim \u003e Dress Up \u0026 Lifestyle | Fashion", "label": "[R] Roleplay \u0026 Avatar Sim \u003e Dress Up \u0026 Lifestyle | Fashion", "shape": "dot", "x": 0, "y": 6550}, {"group": 18, "id": "[ST] Lifestyle \u003e Virtual Pet", "label": "[ST] Lifestyle \u003e Virtual Pet", "shape": "dot", "x": 300, "y": 6700}, {"group": 18, "id": "[R] Roleplay \u0026 Avatar Sim \u003e Pet Care", "label": "[R] Roleplay \u0026 Avatar Sim \u003e Pet Care", "shape": "dot", "x": 0, "y": 6700}, {"group": 19, "id": "[ST] Lifestyle \u003e Ultracasual", "label": "[ST] Lifestyle \u003e Ultracasual", "shape": "dot", "x": 300, "y": 6850}, {"group": 19, "id": "[R] Party \u0026 Casual \u003e Idle", "label": "[R] Party \u0026 Casual \u003e Idle", "shape": "dot", "x": 0, "y": 6850}, {"group": 20, "id": "[ST] Strategy \u003e 4X Strategy", "label": "[ST] Strategy \u003e 4X Strategy", "shape": "dot", "x": 300, "y": 7000}, {"group": 20, "id": "[R] Strategy \u003e Other Strategy", "label": "[R] Strategy \u003e Other Strategy", "shape": "dot", "x": 0, "y": 7000}, {"group": 20, "id": "[ST] Strategy \u003e Build \u0026 Battle", "label": "[ST] Strategy \u003e Build \u0026 Battle", "shape": "dot", "x": 300, "y": 7100}, {"group": 20, "id": "[ST] Strategy \u003e Real-Time Strategy", "label": "[ST] Strategy \u003e Real-Time Strategy", "shape": "dot", "x": 300, "y": 7200}, {"group": 20, "id": "[ST] Strategy \u003e Card Battler", "label": "[ST] Strategy \u003e Card Battler", "shape": "dot", "x": 300, "y": 7300}, {"group": 20, "id": "[ST] Strategy \u003e Empire Simulation", "label": "[ST] Strategy \u003e Empire Simulation", "shape": "dot", "x": 300, "y": 7400}, {"group": 20, "id": "[ST] Strategy \u003e Turn-Based Tactics", "label": "[ST] Strategy \u003e Turn-Based Tactics", "shape": "dot", "x": 300, "y": 7500}, {"group": 20, "id": "[ST] Strategy \u003e Other Strategy", "label": "[ST] Strategy \u003e Other Strategy", "shape": "dot", "x": 300, "y": 7600}, {"group": 21, "id": "[ST] Strategy \u003e Tower Defense", "label": "[ST] Strategy \u003e Tower Defense", "shape": "dot", "x": 300, "y": 7750}, {"group": 21, "id": "[R] Strategy \u003e Tower Defense", "label": "[R] Strategy \u003e Tower Defense", "shape": "dot", "x": 0, "y": 7750}, {"group": 22, "id": "[ST] Action \u003e Action Sandbox", "label": "[ST] Action \u003e Action Sandbox", "shape": "dot", "x": 300, "y": 7900}, {"group": 22, "id": "[R] Action \u0026 Rhythm \u003e Open World Action", "label": "[R] Action \u0026 Rhythm \u003e Open World Action", "shape": "dot", "x": 0, "y": 7900}, {"group": 23, "id": "[ST] Action \u003e Asymmetric Battle", "label": "[ST] Action \u003e Asymmetric Battle", "shape": "dot", "x": 300, "y": 8050}, {"group": 23, "id": "[R] Survival \u003e 1 vs All Survival", "label": "[R] Survival \u003e 1 vs All Survival", "shape": "dot", "x": 0, "y": 8050}, {"group": 24, "id": "[ST] Tabletop \u003e Board", "label": "[ST] Tabletop \u003e Board", "shape": "dot", "x": 300, "y": 8400}, {"group": 24, "id": "[R] Strategy \u003e Board \u0026 Card Games", "label": "[R] Strategy \u003e Board \u0026 Card Games", "shape": "dot", "x": 0, "y": 8400}, {"group": 24, "id": "[ST] Tabletop \u003e Solitaire", "label": "[ST] Tabletop \u003e Solitaire", "shape": "dot", "x": 300, "y": 8500}, {"group": 24, "id": "[ST] Tabletop \u003e Tabletop Cards", "label": "[ST] Tabletop \u003e Tabletop Cards", "shape": "dot", "x": 300, "y": 8600}, {"group": 25, "id": "[ST] Tabletop \u003e Drawing \u0026 Coloring", "label": "[ST] Tabletop \u003e Drawing \u0026 Coloring", "shape": "dot", "x": 300, "y": 8750}, {"group": 25, "id": "[R] Party \u0026 Casual \u003e Coloring \u0026 Drawing", "label": "[R] Party \u0026 Casual \u003e Coloring \u0026 Drawing", "shape": "dot", "x": 0, "y": 8750}, {"group": 26, "id": "[ST] Geolocation \u003e Geolocation", "label": "[ST] Geolocation \u003e Geolocation", "shape": "dot", "x": 300, "y": 9100}, {"group": 27, "id": "[ST] RPG \u003e MMORPG", "label": "[ST] RPG \u003e MMORPG", "shape": "dot", "x": 300, "y": 9450}, {"group": 27, "id": "[R] RPG \u003e Action RPG", "label": "[R] RPG \u003e Action RPG", "shape": "dot", "x": 0, "y": 9450}, {"group": 27, "id": "[ST] RPG \u003e Action RPG", "label": "[ST] RPG \u003e Action RPG", "shape": "dot", "x": 300, "y": 9550}, {"group": 28, "id": "[ST] RPG \u003e Survival", "label": "[ST] RPG \u003e Survival", "shape": "dot", "x": 300, "y": 9700}, {"group": 28, "id": "[R] RPG \u003e Open World \u0026 Survival RPG", "label": "[R] RPG \u003e Open World \u0026 Survival RPG", "shape": "dot", "x": 0, "y": 9700}, {"group": 28, "id": "[ST] RPG \u003e Open World Adventure", "label": "[ST] RPG \u003e Open World Adventure", "shape": "dot", "x": 300, "y": 9800}, {"group": 29, "id": "[ST] RPG \u003e Puzzle RPG", "label": "[ST] RPG \u003e Puzzle RPG", "shape": "dot", "x": 300, "y": 9950}, {"group": 29, "id": "[R] RPG \u003e Other RPG", "label": "[R] RPG \u003e Other RPG", "shape": "dot", "x": 0, "y": 9950}, {"group": 29, "id": "[ST] RPG \u003e Idle RPG", "label": "[ST] RPG \u003e Idle RPG", "shape": "dot", "x": 300, "y": 10050}, {"group": 30, "id": "[ST] RPG \u003e Turn-based RPG", "label": "[ST] RPG \u003e Turn-based RPG", "shape": "dot", "x": 300, "y": 10200}, {"group": 30, "id": "[R] RPG \u003e Turn-based RPG", "label": "[R] RPG \u003e Turn-based RPG", "shape": "dot", "x": 0, "y": 10200}, {"group": 30, "id": "[ST] RPG \u003e Squad RPG", "label": "[ST] RPG \u003e Squad RPG", "shape": "dot", "x": 300, "y": 10300}, {"group": 31, "id": "[ST] Shooter \u003e FPS / 3PS", "label": "[ST] Shooter \u003e FPS / 3PS", "shape": "dot", "x": 300, "y": 10650}, {"group": 31, "id": "[R] Shooter \u003e PvE Shooting", "label": "[R] Shooter \u003e PvE Shooting", "shape": "dot", "x": 0, "y": 10650}, {"group": 31, "id": "[R] Shooter \u003e Deathmatch Shooter", "label": "[R] Shooter \u003e Deathmatch Shooter", "shape": "dot", "x": 0, "y": 10750}, {"group": 31, "id": "[ST] Shooter \u003e Sniper", "label": "[ST] Shooter \u003e Sniper", "shape": "dot", "x": 300, "y": 10750}, {"group": 32, "id": "[ST] Shooter \u003e Battle Royale", "label": "[ST] Shooter \u003e Battle Royale", "shape": "dot", "x": 300, "y": 10900}, {"group": 32, "id": "[R] Shooter \u003e Battle Royale", "label": "[R] Shooter \u003e Battle Royale", "shape": "dot", "x": 0, "y": 10900}, {"group": 33, "id": "[ST] Shooter \u003e Vehicular Shooter", "label": "[ST] Shooter \u003e Vehicular Shooter", "shape": "dot", "x": 300, "y": 11050}, {"group": 33, "id": "[R] Shooter \u003e Other Shooter", "label": "[R] Shooter \u003e Other Shooter", "shape": "dot", "x": 0, "y": 11050}, {"group": 34, "id": "[ST] Sports \u003e Arcade Sports", "label": "[ST] Sports \u003e Arcade Sports", "shape": "dot", "x": 300, "y": 11400}, {"group": 34, "id": "[R] Sports \u0026 Racing \u003e Sports", "label": "[R] Sports \u0026 Racing \u003e Sports", "shape": "dot", "x": 0, "y": 11400}, {"group": 34, "id": "[ST] Sports \u003e Realistic Sports", "label": "[ST] Sports \u003e Realistic Sports", "shape": "dot", "x": 300, "y": 11500}, {"group": 34, "id": "[ST] Sports \u003e Sports Manager", "label": "[ST] Sports \u003e Sports Manager", "shape": "dot", "x": 300, "y": 11600}, {"group": 35, "id": "[ST] Racing \u003e Arcade Racing", "label": "[ST] Racing \u003e Arcade Racing", "shape": "dot", "x": 300, "y": 11950}, {"group": 35, "id": "[R] Sports \u0026 Racing \u003e Racing", "label": "[R] Sports \u0026 Racing \u003e Racing", "shape": "dot", "x": 0, "y": 11950}, {"group": 35, "id": "[ST] Racing \u003e Realistic Racing", "label": "[ST] Racing \u003e Realistic Racing", "shape": "dot", "x": 300, "y": 12050}, {"group": 35, "id": "[ST] Racing \u003e Drag Racing", "label": "[ST] Racing \u003e Drag Racing", "shape": "dot", "x": 300, "y": 12150}, {"group": 35, "id": "[ST] Racing \u003e Kart Racing", "label": "[ST] Racing \u003e Kart Racing", "shape": "dot", "x": 300, "y": 12250}, {"group": 36, "id": "[ST] Casino \u003e Slots", "label": "[ST] Casino \u003e Slots", "shape": "dot", "x": 300, "y": 12600}, {"group": 37, "id": "[ST] Casino \u003e Bingo", "label": "[ST] Casino \u003e Bingo", "shape": "dot", "x": 300, "y": 12750}, {"group": 38, "id": "[ST] Casino \u003e Casino Cards", "label": "[ST] Casino \u003e Casino Cards", "shape": "dot", "x": 300, "y": 12900}, {"group": 39, "id": "[ST] Casino \u003e Coin Looters", "label": "[ST] Casino \u003e Coin Looters", "shape": "dot", "x": 300, "y": 13050}, {"group": 40, "id": "[ST] Casino \u003e Fish Shooting", "label": "[ST] Casino \u003e Fish Shooting", "shape": "dot", "x": 300, "y": 13200}, {"group": 41, "id": "[ST] Casino \u003e Landlord", "label": "[ST] Casino \u003e Landlord", "shape": "dot", "x": 300, "y": 13350}, {"group": 42, "id": "[ST] Casino \u003e Poker", "label": "[ST] Casino \u003e Poker", "shape": "dot", "x": 300, "y": 13500}, {"group": 43, "id": "[ST] Casino \u003e Virtual Casino", "label": "[ST] Casino \u003e Virtual Casino", "shape": "dot", "x": 300, "y": 13650}, {"group": 44, "id": "[ST] Casino \u003e Mahjong", "label": "[ST] Casino \u003e Mahjong", "shape": "dot", "x": 300, "y": 13800}, {"group": 45, "id": "[ST] Casino \u003e Pachinko", "label": "[ST] Casino \u003e Pachinko", "shape": "dot", "x": 300, "y": 13950}, {"group": 46, "id": "[ST] Casino \u003e Teen Patti", "label": "[ST] Casino \u003e Teen Patti", "shape": "dot", "x": 300, "y": 14100}, {"group": 47, "id": "[ST] Casino \u003e Okey", "label": "[ST] Casino \u003e Okey", "shape": "dot", "x": 300, "y": 14250}, {"group": 48, "id": "[ST] Casino \u003e Coin Pusher", "label": "[ST] Casino \u003e Coin Pusher", "shape": "dot", "x": 300, "y": 14400}, {"group": 49, "id": "[ST] Casino \u003e Dominoes", "label": "[ST] Casino \u003e Dominoes", "shape": "dot", "x": 300, "y": 14550}, {"group": 50, "id": "[R] Education | Learning", "label": "[R] Education | Learning", "shape": "dot", "x": 0, "y": 14900}, {"group": 50, "id": "[R] Entertainment \u003e Music \u0026 Audio", "label": "[R] Entertainment \u003e Music \u0026 Audio", "shape": "dot", "x": 0, "y": 15000}, {"group": 50, "id": "[R] Entertainment \u003e Showcase \u0026 Hub", "label": "[R] Entertainment \u003e Showcase \u0026 Hub", "shape": "dot", "x": 0, "y": 15100}, {"group": 50, "id": "[R] Entertainment \u003e Video", "label": "[R] Entertainment \u003e Video", "shape": "dot", "x": 0, "y": 15200}, {"group": 50, "id": "[R] Entertainment \u003e Other Entertainment", "label": "[R] Entertainment \u003e Other Entertainment", "shape": "dot", "x": 0, "y": 15300}, {"group": 50, "id": "[R] Shopping \u003e Avatar Shopping", "label": "[R] Shopping \u003e Avatar Shopping", "shape": "dot", "x": 0, "y": 15400}, {"group": 50, "id": "[R] Shopping \u003e Other Shopping", "label": "[R] Shopping \u003e Other Shopping", "shape": "dot", "x": 0, "y": 15500}, {"group": 50, "id": "[R] Social \u003e Content Sharing", "label": "[R] Social \u003e Content Sharing", "shape": "dot", "x": 0, "y": 15600}, {"group": 50, "id": "[R] Social \u003e Communication", "label": "[R] Social \u003e Communication", "shape": "dot", "x": 0, "y": 15700}, {"group": 50, "id": "[R] Social \u003e Hangout | Avatar-Based Social", "label": "[R] Social \u003e Hangout | Avatar-Based Social", "shape": "dot", "x": 0, "y": 15800}, {"group": 50, "id": "[R] Social \u003e Other Social", "label": "[R] Social \u003e Other Social", "shape": "dot", "x": 0, "y": 15900}, {"group": 50, "id": "[R] Utility / Other", "label": "[R] Utility / Other", "shape": "dot", "x": 0, "y": 16000}]);
+                  edges = new vis.DataSet([{"from": "[ST] Puzzle \u003e Word", "to": "[R] Puzzle \u003e Word"}, {"from": "[ST] Puzzle \u003e Hidden Objects", "to": "[R] Puzzle \u003e Other Puzzle"}, {"from": "[ST] Puzzle \u003e Bubble Shooter", "to": "[R] Puzzle \u003e Other Puzzle"}, {"from": "[ST] Puzzle \u003e Sort", "to": "[R] Puzzle \u003e Other Puzzle"}, {"from": "[ST] Puzzle \u003e Jigsaw", "to": "[R] Puzzle \u003e Other Puzzle"}, {"from": "[ST] Puzzle \u003e Real-Time Puzzle", "to": "[R] Puzzle \u003e Other Puzzle"}, {"from": "[ST] Puzzle \u003e Riddle", "to": "[R] Puzzle \u003e Other Puzzle"}, {"from": "[ST] Puzzle \u003e Physics", "to": "[R] Puzzle \u003e Other Puzzle"}, {"from": "[ST] Puzzle \u003e Block", "to": "[R] Puzzle \u003e Other Puzzle"}, {"from": "[ST] Puzzle \u003e Maze", "to": "[R] Puzzle \u003e Other Puzzle"}, {"from": "[ST] Puzzle \u003e Numbers", "to": "[R] Puzzle \u003e Other Puzzle"}, {"from": "[ST] Puzzle \u003e Other Puzzle", "to": "[R] Puzzle \u003e Other Puzzle"}, {"from": "[ST] Puzzle \u003e Trivia", "to": "[R] Party \u0026 Casual \u003e Quiz | Trivia"}, {"from": "[ST] Puzzle \u003e Match Merge", "to": "[R] Puzzle \u003e Match \u0026 Merge"}, {"from": "[ST] Puzzle \u003e Match Swap", "to": "[R] Puzzle \u003e Match \u0026 Merge"}, {"from": "[ST] Puzzle \u003e Match Blast", "to": "[R] Puzzle \u003e Match \u0026 Merge"}, {"from": "[ST] Puzzle \u003e Match Chain", "to": "[R] Puzzle \u003e Match \u0026 Merge"}, {"from": "[ST] Puzzle \u003e Match Pair", "to": "[R] Puzzle \u003e Match \u0026 Merge"}, {"from": "[ST] Puzzle \u003e Environmental", "to": "[R] Adventure \u003e Scavenger Hunt Adventure"}, {"from": "[ST] Puzzle \u003e Environmental", "to": "[R] Puzzle \u003e Escape Room"}, {"from": "[ST] Arcade \u003e Platformer / Runner", "to": "[R] Obby | Platformer \u003e Classic Obby | Classic Platformer"}, {"from": "[ST] Arcade \u003e Platformer / Runner", "to": "[R] Obby | Platformer \u003e Runner"}, {"from": "[ST] Arcade \u003e Platformer / Runner", "to": "[R] Obby | Platformer \u003e Tower Obby | Tower Platformer"}, {"from": "[ST] Arcade \u003e Platformer / Runner", "to": "[R] Obby | Platformer \u003e Other Obby | Platformer"}, {"from": "[ST] Arcade \u003e Arcade Driving", "to": "[R] Simulation \u0026 Sandbox \u003e Driving | Vehicle Sim"}, {"from": "[ST] Simulation \u003e Driving / Flight Simulator", "to": "[R] Simulation \u0026 Sandbox \u003e Driving | Vehicle Sim"}, {"from": "[ST] Arcade \u003e Arcade Combat", "to": "[R] Action \u0026 Rhythm \u003e Battlegrounds \u0026 Fighting"}, {"from": "[ST] Action \u003e Fighting", "to": "[R] Action \u0026 Rhythm \u003e Battlegrounds \u0026 Fighting"}, {"from": "[ST] Strategy \u003e MOBA", "to": "[R] Action \u0026 Rhythm \u003e Battlegrounds \u0026 Fighting"}, {"from": "[ST] Arcade \u003e Social Party", "to": "[R] Party \u0026 Casual \u003e Childhood Game"}, {"from": "[ST] Arcade \u003e Social Party", "to": "[R] Party \u0026 Casual \u003e Minigame"}, {"from": "[ST] Arcade \u003e Social Party", "to": "[R] Party \u0026 Casual \u003e Other Party \u0026 Casual"}, {"from": "[ST] Arcade \u003e Music / Rhythm", "to": "[R] Action \u0026 Rhythm \u003e Music \u0026 Rhythm"}, {"from": "[ST] Arcade \u003e .io", "to": "[R] Action \u0026 Rhythm \u003e Other Action"}, {"from": "[ST] Action \u003e Beat \u0027em Up", "to": "[R] Action \u0026 Rhythm \u003e Other Action"}, {"from": "[ST] Action \u003e Hack and Slash", "to": "[R] Action \u0026 Rhythm \u003e Other Action"}, {"from": "[ST] Action \u003e Shoot \u0027em Up", "to": "[R] Action \u0026 Rhythm \u003e Other Action"}, {"from": "[ST] Arcade \u003e Pinball / Brick Breaker", "to": "[R] Action \u0026 Rhythm \u003e Other Action"}, {"from": "[ST] Arcade \u003e Other Arcade", "to": "[R] Action \u0026 Rhythm \u003e Other Action"}, {"from": "[ST] Simulation \u003e Simulator", "to": "[R] Simulation \u0026 Sandbox \u003e Other Simulation"}, {"from": "[ST] Simulation \u003e Time Management", "to": "[R] Simulation \u0026 Sandbox \u003e Other Simulation"}, {"from": "[ST] Simulation \u003e Breeding", "to": "[R] Simulation \u0026 Sandbox \u003e Other Simulation"}, {"from": "[ST] Simulation \u003e Tycoon / Crafting", "to": "[R] Simulation \u0026 Sandbox \u003e Tycoon | Management Sim"}, {"from": "[ST] Simulation \u003e Adventure", "to": "[R] Adventure \u003e Adventure | Interactive Story"}, {"from": "[ST] Simulation \u003e Adventure", "to": "[R] Adventure \u003e Other Adventure"}, {"from": "[ST] Simulation \u003e Adventure", "to": "[R] Survival \u003e Stealth Survival"}, {"from": "[ST] Simulation \u003e Adventure", "to": "[R] Survival \u003e Other Survival"}, {"from": "[ST] Simulation \u003e Sandbox", "to": "[R] Adventure \u003e Exploration"}, {"from": "[ST] Simulation \u003e Sandbox", "to": "[R] Simulation \u0026 Sandbox \u003e Physics Sim"}, {"from": "[ST] Simulation \u003e Sandbox", "to": "[R] Simulation \u0026 Sandbox \u003e Sandbox"}, {"from": "[ST] Simulation \u003e Idler", "to": "[R] Simulation \u0026 Sandbox \u003e Incremental Simulator"}, {"from": "[ST] Simulation \u003e Avatar Life", "to": "[R] Roleplay \u0026 Avatar Sim \u003e Animal Avatar Sim | Animal Roleplay"}, {"from": "[ST] Simulation \u003e Avatar Life", "to": "[R] Roleplay \u0026 Avatar Sim \u003e Life"}, {"from": "[ST] Simulation \u003e Avatar Life", "to": "[R] Roleplay \u0026 Avatar Sim \u003e Morph"}, {"from": "[ST] Simulation \u003e Avatar Life", "to": "[R] Roleplay \u0026 Avatar Sim \u003e Other Roleplay \u0026 Avatar Sim"}, {"from": "[ST] Lifestyle \u003e Interactive Story", "to": "[R] Roleplay \u0026 Avatar Sim \u003e Life"}, {"from": "[ST] Lifestyle \u003e Customization", "to": "[R] Roleplay \u0026 Avatar Sim \u003e Dress Up \u0026 Lifestyle | Fashion"}, {"from": "[ST] Lifestyle \u003e Virtual Pet", "to": "[R] Roleplay \u0026 Avatar Sim \u003e Pet Care"}, {"from": "[ST] Lifestyle \u003e Ultracasual", "to": "[R] Party \u0026 Casual \u003e Idle"}, {"from": "[ST] Strategy \u003e 4X Strategy", "to": "[R] Strategy \u003e Other Strategy"}, {"from": "[ST] Strategy \u003e Build \u0026 Battle", "to": "[R] Strategy \u003e Other Strategy"}, {"from": "[ST] Strategy \u003e Real-Time Strategy", "to": "[R] Strategy \u003e Other Strategy"}, {"from": "[ST] Strategy \u003e Card Battler", "to": "[R] Strategy \u003e Other Strategy"}, {"from": "[ST] Strategy \u003e Empire Simulation", "to": "[R] Strategy \u003e Other Strategy"}, {"from": "[ST] Strategy \u003e Turn-Based Tactics", "to": "[R] Strategy \u003e Other Strategy"}, {"from": "[ST] Strategy \u003e Other Strategy", "to": "[R] Strategy \u003e Other Strategy"}, {"from": "[ST] Strategy \u003e Tower Defense", "to": "[R] Strategy \u003e Tower Defense"}, {"from": "[ST] Action \u003e Action Sandbox", "to": "[R] Action \u0026 Rhythm \u003e Open World Action"}, {"from": "[ST] Action \u003e Asymmetric Battle", "to": "[R] Survival \u003e 1 vs All Survival"}, {"from": "[ST] Tabletop \u003e Board", "to": "[R] Strategy \u003e Board \u0026 Card Games"}, {"from": "[ST] Tabletop \u003e Solitaire", "to": "[R] Strategy \u003e Board \u0026 Card Games"}, {"from": "[ST] Tabletop \u003e Tabletop Cards", "to": "[R] Strategy \u003e Board \u0026 Card Games"}, {"from": "[ST] Tabletop \u003e Drawing \u0026 Coloring", "to": "[R] Party \u0026 Casual \u003e Coloring \u0026 Drawing"}, {"from": "[ST] RPG \u003e MMORPG", "to": "[R] RPG \u003e Action RPG"}, {"from": "[ST] RPG \u003e Action RPG", "to": "[R] RPG \u003e Action RPG"}, {"from": "[ST] RPG \u003e Survival", "to": "[R] RPG \u003e Open World \u0026 Survival RPG"}, {"from": "[ST] RPG \u003e Open World Adventure", "to": "[R] RPG \u003e Open World \u0026 Survival RPG"}, {"from": "[ST] RPG \u003e Puzzle RPG", "to": "[R] RPG \u003e Other RPG"}, {"from": "[ST] RPG \u003e Idle RPG", "to": "[R] RPG \u003e Other RPG"}, {"from": "[ST] RPG \u003e Turn-based RPG", "to": "[R] RPG \u003e Turn-based RPG"}, {"from": "[ST] RPG \u003e Squad RPG", "to": "[R] RPG \u003e Turn-based RPG"}, {"from": "[ST] Shooter \u003e FPS / 3PS", "to": "[R] Shooter \u003e PvE Shooting"}, {"from": "[ST] Shooter \u003e FPS / 3PS", "to": "[R] Shooter \u003e Deathmatch Shooter"}, {"from": "[ST] Shooter \u003e Sniper", "to": "[R] Shooter \u003e PvE Shooting"}, {"from": "[ST] Shooter \u003e Battle Royale", "to": "[R] Shooter \u003e Battle Royale"}, {"from": "[ST] Shooter \u003e Vehicular Shooter", "to": "[R] Shooter \u003e Other Shooter"}, {"from": "[ST] Sports \u003e Arcade Sports", "to": "[R] Sports \u0026 Racing \u003e Sports"}, {"from": "[ST] Sports \u003e Realistic Sports", "to": "[R] Sports \u0026 Racing \u003e Sports"}, {"from": "[ST] Sports \u003e Sports Manager", "to": "[R] Sports \u0026 Racing \u003e Sports"}, {"from": "[ST] Racing \u003e Arcade Racing", "to": "[R] Sports \u0026 Racing \u003e Racing"}, {"from": "[ST] Racing \u003e Realistic Racing", "to": "[R] Sports \u0026 Racing \u003e Racing"}, {"from": "[ST] Racing \u003e Drag Racing", "to": "[R] Sports \u0026 Racing \u003e Racing"}, {"from": "[ST] Racing \u003e Kart Racing", "to": "[R] Sports \u0026 Racing \u003e Racing"}]);
+
+                  nodeColors = {};
+                  allNodes = nodes.get({ returnType: "Object" });
+                  for (nodeId in allNodes) {
+                    nodeColors[nodeId] = allNodes[nodeId].color;
+                  }
+                  allEdges = edges.get({ returnType: "Object" });
+                  // adding nodes and edges to the graph
+                  data = {nodes: nodes, edges: edges};
+
+                  var options = {
+    "configure": {
+        "enabled": false
+    },
+    "edges": {
+        "color": {
+            "inherit": true
+        },
+        "smooth": {
+            "enabled": true,
+            "type": "dynamic"
+        }
+    },
+    "interaction": {
+        "dragNodes": true,
+        "hideEdgesOnDrag": false,
+        "hideNodesOnDrag": false
+    },
+    "physics": {
+        "enabled": false,
+        "stabilization": {
+            "enabled": true,
+            "fit": true,
+            "iterations": 1000,
+            "onlyDynamicEdges": false,
+            "updateInterval": 50
+        }
+    }
+};
+
+                  
+
+
+                  
+
+                  network = new vis.Network(container, data, options);
+
+                  
+
+                  
+
+                  
+
+
+                  
+
+                  return network;
+
+              }
+              drawGraph();
+        </script>
+    </body>
+</html>
